@@ -1,76 +1,51 @@
 import * as admin from "firebase-admin";
 import moment from "moment";
-
-export interface IPayment {
-  kind: "cash" | "crypto" | "card";
-  usd: number;
-  bay: 1 | 2 | 3 | 4 | 5;
-  receivedAt: number;
-  crypto?: {
-    id: string;
-    asset: string;
-    amount: number;
-  };
-}
-
-export interface IWashTime {
-  m: number;
-  s: number;
-}
-
-export interface IWashCycle {
-  // time right now
-  now: number;
-  // time to add to the clock (additional purchased time)
-  addSeconds: number;
-  // Last recorded wash end time (requires query from db)
-  lastEnd: number;
-  // start is the greater of the lastEnd or now
-  start: number;
-  // end equals the start + addSeconds
-  end: number;
-}
+import { ITimeCycle, ITimePricingGet } from "../time/time";
 
 export class Database {
   private db: admin.database.Database;
+  private pricingRef: admin.database.Reference;
 
   constructor() {
     this.db = admin.database();
+    this.pricingRef = this.db.ref(`time/price/minute`);
   }
 
-  async getBayForCryptoCheckout(
+  private getTimeCycleRef(checkoutId: string): admin.database.Reference {
+    return this.db.ref(`time/${checkoutId}`);
+  }
+
+  // async getCheckoutDetails(checkoutId: string): Promise<1 | 2 | 3 | 4 | 5> {
+  //   const bay = (
+  //     await this.db.ref(`checkoutMap/${checkoutId}`).once("value")
+  //   ).val() as any;
+  //   return bay;
+  // }
+
+  async getLastCycleTime(
     checkoutId: string
-  ): Promise<1 | 2 | 3 | 4 | 5> {
-    const bay = (
-      await this.db.ref(`checkoutMap/${checkoutId}`).once("value")
-    ).val() as any;
-    return bay;
-  }
-
-  async recordPayment(payment: IPayment): Promise<void> {
-    try {
-      await this.db.ref(`payment`).push(payment);
-    } catch (error) {
-      console.log(error);
-    }
-    return;
-  }
-
-  async getLastWashTime(
-    bay: number
-  ): Promise<{ [timestamp: string]: IWashCycle }> {
-    const ref = this.db.ref(`wash/${bay}`);
+  ): Promise<{ [timestamp: string]: ITimeCycle }> {
     // query the last end time
     const lastRecord = (
-      await ref.orderByKey().limitToLast(1).once("value")
+      await this.getTimeCycleRef(checkoutId)
+        .orderByKey()
+        .limitToLast(1)
+        .once("value")
     ).val() as any;
     return lastRecord;
   }
 
-  async addWashTime(bay: number, washCycle: IWashCycle): Promise<void> {
-    const ref = this.db.ref(`wash/${bay}`);
+  async addCycleTime(checkoutId: string, timeCycle: ITimeCycle): Promise<void> {
     const nowMs = moment().format("x");
-    await ref.child(nowMs).set(washCycle);
+    await this.getTimeCycleRef(checkoutId).child(nowMs).set(timeCycle);
     return;
+  }
+
+  async getTimePricing(obj: ITimePricingGet): Promise<number> {
+    return await (
+      await this.pricingRef
+        .child(`${obj.checkoutId}/${obj.duration}`)
+        .once("value")
+    ).val();
   }
 }

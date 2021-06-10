@@ -31,8 +31,6 @@ interface IDevSecrets {
 
 export interface ISecrets {
   // the following will be set and retrieved via Secret Manager
-  coinbase_commerce_api_key: string;
-  coinbase_commerce_webhook_secret: string;
 }
 
 export interface IGlobal {
