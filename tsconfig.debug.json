@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+      "target": "es5",
+      "module": "commonjs",
+      "outDir": "lib",
+      "sourceMap": true,
+      "experimentalDecorators": true,
+      "esModuleInterop": true,
+      "strict": true, 
+      "noImplicitAny": true, 
+      "strictNullChecks": true,    
+      "noUnusedLocals": true,  
+      "alwaysStrict": true, 
+    }
+  }

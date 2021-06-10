@@ -1,0 +1,8 @@
+runtime: nodejs14
+env_variables:
+  gcp_project_number: "820026586317"
+  firebase_database_url: "https://xlear-car-wash-default-rtdb.firebaseio.com/"
+  build: prod
+handlers:
+- url: /assets
+  static_dir: assets
