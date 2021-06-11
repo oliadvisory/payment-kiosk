@@ -7,6 +7,7 @@ import _ from "lodash";
 import admin from "firebase-admin";
 import { IRequest } from "./http";
 import { fetchSecrets } from "./secret-manager";
+import { TimeWatchers } from "./time/timeWatchers";
 
 declare var process: {
   env: IEnv;
@@ -65,7 +66,7 @@ export class Config {
   private async loadSecrets() {
     const secretsLoaded = _.get(global, "secrets_loaded", false);
     // get container secrets from secret manager
-    if (!secretsLoaded && process.env.build === "prod") {
+    if (!secretsLoaded) {
       // update global value denoting that secrets are loaded
       _.set(global, "secrets_loaded", true);
 
@@ -74,33 +75,38 @@ export class Config {
     }
   }
 
+  private startWatchers() {
+    const watchersStarted = _.get(global, "watchers_started", false);
+    if (!watchersStarted) {
+      // update global value denoting that watchers are started
+      _.set(global, "watchers_started", true);
+      // start watchers
+      new TimeWatchers().watchPaymentsForCheckout();
+    }
+  }
+
+  private initFirebase() {
+    const firebaseInitialized = _.get(global, "initialized_firebase", false);
+    if (!firebaseInitialized) {
+      // update global value denoting that firebase is initialized
+      _.set(global, "initialized_firebase", true);
+
+      // initialize firebase app
+      // https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
+      // https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app
+      // console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS)
+
+      admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        databaseURL: process.env.firebase_database_url,
+      });
+    }
+  }
+
   private async startServices() {
-    this.app.use(async (req, res, next) => {
-      // async Secret loading (eg: load secrets and start db) after first request in middleware
-      // this way we only get the secrets when needed after runtime
-      // NOTE: we don't retrieve at run time because if we did we
-      // would slow the cold start time and slow the build since the
-      // app would have to wait to get secrets before booting up completely
-      await this.loadSecrets();
-
-      const firebaseInitialized = _.get(global, "initialized_firebase", false);
-      if (!firebaseInitialized) {
-        // update global value denoting that firebase is initialized
-        _.set(global, "initialized_firebase", true);
-
-        // initialize firebase app
-        // https://cloud.google.com/docs/authentication/production#providing_credentials_to_your_application
-        // https://firebase.google.com/docs/admin/setup#add_firebase_to_your_app
-        // console.log(process.env.GOOGLE_APPLICATION_CREDENTIALS)
-
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault(),
-          databaseURL: process.env.firebase_database_url,
-        });
-      }
-
-      next();
-    });
+    await this.loadSecrets();
+    this.initFirebase();
+    this.startWatchers();
   }
 
   private setEnv() {

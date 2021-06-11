@@ -12,7 +12,8 @@
       "preLaunchTask": "npm: debug",
       "outFiles": ["${workspaceFolder}/lib/**/*.js"],
       "env": {
-        "build":"dev"
+        "build":"dev",
+        "PORT": "3000"
       }
     }
   ]

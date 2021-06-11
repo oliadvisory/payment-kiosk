@@ -58,6 +58,7 @@ export class Time {
       end,
     };
     await this.db.addCycleTime(checkoutId, cycle);
+    // TODO: run raspberry pi until end time has expired
     return;
   }
 }

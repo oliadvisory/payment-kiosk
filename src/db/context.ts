@@ -5,14 +5,16 @@ import { ITimeCycle, ITimePricingGet } from "../time/time";
 export class Database {
   private db: admin.database.Database;
   private pricingRef: admin.database.Reference;
+  private paymentsRef: admin.database.Reference;
 
   constructor() {
     this.db = admin.database();
-    this.pricingRef = this.db.ref(`time/price/minute`);
+    this.pricingRef = this.db.ref(`time/price`);
+    this.paymentsRef = this.db.ref(`payment`);
   }
 
   private getTimeCycleRef(checkoutId: string): admin.database.Reference {
-    return this.db.ref(`time/${checkoutId}`);
+    return this.db.ref(`time/cycle/${checkoutId}`);
   }
 
   // async getCheckoutDetails(checkoutId: string): Promise<1 | 2 | 3 | 4 | 5> {
@@ -47,5 +49,13 @@ export class Database {
         .child(`${obj.checkoutId}/${obj.duration}`)
         .once("value")
     ).val();
+  }
+
+  async updatePaymentProcessing(
+    paymentId: string,
+    status: "received" | "fulfilling" | "completed"
+  ) {
+    await this.paymentsRef.child(`${paymentId}/processing`).set(status);
+    return;
   }
 }
